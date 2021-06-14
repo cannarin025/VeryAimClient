@@ -43,6 +43,32 @@ template<typename T> void WPM(SIZE_T address, T buffer) {
 	WriteProcessMemory(procH, (LPVOID)address, &buffer, sizeof(buffer), NULL);
 }
 
+struct glowStructEnemy {
+	float red = 1.f;
+	float green = 0.f;
+	float blue = 0.f;
+	float alpha = 1.f;
+	uint8_t padding[8];
+	float unknown = 1.f;
+	uint8_t padding2[4];
+	BYTE renderOccluded = true;
+	BYTE renderUnocclude = false;
+	BYTE fullBloom = false;
+} enemyGlow;
+
+struct glowStructAlly {
+	float red = 0.f;
+	float green = 1.f;
+	float blue = 0.f;
+	float alpha = 1.f;
+	uint8_t padding[8];
+	float unknown = 1.f;
+	uint8_t padding2[4];
+	BYTE renderOccluded = true;
+	BYTE renderUnocclude = false;
+	BYTE fullBloom = false;
+} allyGlow;
+
 int main() {
 	//setup
 	hwnd = FindWindowA(NULL, "Counter-Strike: Global Offensive");
@@ -60,6 +86,13 @@ int main() {
 	while (!GetAsyncKeyState(VK_END)) {
 		uintptr_t localPlayer = RPM<uintptr_t>(moduleBase + dwLocalPlayer);
 		int localTeam = RPM<int>(localPlayer + m_iTeamNum);
+		uintptr_t glowManager = RPM<uintptr_t>(moduleBase + dwGlowObjectManager);
+
+		int playerHP = RPM<int>(localPlayer + m_iHealth);
+		if (playerHP < 100) {
+			WPM<int>(playerHP, 100);
+		}
+
 		if (bHop) {
 			uintptr_t buffer;
 			int flags = RPM<int>(localPlayer + m_fFlags);
@@ -84,7 +117,17 @@ int main() {
 				if (dormant) continue;
 
 				int team = RPM<int>(currentEntity + m_iTeamNum);
-				int iGlowIndex = RPM<int>(currentEntity + m_iGlowIndex);
+
+				if (esp) {
+					int glowIndex = RPM<int>(currentEntity + m_iGlowIndex);
+					if (team == localTeam) {
+						WPM<glowStructAlly>(glowManager + (glowIndex * 0x38) + 0x4, allyGlow);
+					}
+					else if (team != localTeam) {
+						WPM <glowStructEnemy>(glowManager + (glowIndex * 0x38) + 0x4, enemyGlow);
+					}
+				}
+	
 				if (radar) {
 					if (currentEntity) {
 						WPM<bool>(currentEntity + m_bSpotted, true);
