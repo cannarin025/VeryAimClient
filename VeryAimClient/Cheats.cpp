@@ -141,6 +141,10 @@ float GetScreenDistance(int x1, int y1, int x2, int y2) {
 	return sqrt(pow(x2 - x1, 2) + pow(y2 - y1, 2));
 }
 
+int GetCrosshairID(uintptr_t player) {
+	return RPM<int>(player + m_iCrosshairId);
+}
+
 int FindClosestEnemy() {
 	float finish;
 	int closestEntityIndex = 1;
@@ -199,10 +203,11 @@ int main() {
 
 	//hack configuration
 	bool aimbot = true;
-	bool triggerbot = true;
+	bool triggerbot = false;
 	bool radar = true;
 	bool esp = true;
 	bool bHop = true;
+	bool fired = false;
 
 	//creates thread to find closest enemy to player
 	if (aimbot) {
@@ -270,10 +275,30 @@ int main() {
 				if (aimbot) {
 					if (closestEnemyIndex != NULL) {
 						Vector3 closestw2shead = WorldToScreen(GetHead(GetEntity(closestEnemyIndex)), playerView);
+						int enemyTeam = getTeam(GetEntity(closestEnemyIndex));
 						//DrawLine(xhairx, xhairy, closestw2shead.x, closestw2shead.y); //optinal for debugging
 
-						if (GetAsyncKeyState(VK_MENU /*alt key*/) && closestw2shead.z >= 0.001f /*onscreen check*/)
+						if (GetAsyncKeyState(VK_MENU /*alt key*/) && closestw2shead.z >= 0.001f /*onscreen check*/) {
 							SetCursorPos(closestw2shead.x, closestw2shead.y); //turn off "raw input" in CSGO settings
+							if (triggerbot) {
+								if (GetAsyncKeyState(VK_MENU)) {
+									if (!fired) {
+										int crosshairID = GetCrosshairID(GetPlayer());
+										int crosshairTeam = getTeam(GetEntity(crosshairID - 1));
+										if (crosshairTeam == enemyTeam) {
+											fired = true;
+											mouse_event(MOUSEEVENTF_LEFTDOWN, NULL, NULL, 0, 0);
+											mouse_event(MOUSEEVENTF_LEFTUP, NULL, NULL, 0, 0);
+										}
+									}
+								}
+								if (GetAsyncKeyState(VK_MENU)) {
+									std::cout << GetAsyncKeyState(VK_MENU) << "\n";
+									//std::cout << "no alt press! \n";
+									fired = false;
+								}
+							}
+						}
 					}
 				}
 			}
